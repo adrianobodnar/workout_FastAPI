@@ -12,39 +12,124 @@ Repositório desenvolvido para fins didáticos, criado para armazenar os projeto
 
 
 
-## Objetivo
-Desenvolver habilidades com projetos práticos, desafios de códigos e mentorias com experts da DIO.
+### Quem é o FastAPi?
+
+Framework FastAPI, alta performance, fácil de aprender, fácil de codar, pronto para produção. FastAPI é um moderno e rápido (alta performance) framework web para construção de APIs com Python 3.6 ou superior, baseado nos type hints padrões do Python
 
 
+## Tecnologias Utilizadas
 
-## Habilidades
+🏆 Pipenv - Controle de versão
 
+🏆 PostgreSQL - Banco de dados com docker-compose
 
-🏆 GIT e  GITHUB
+🏆 SQLAlchemy + Pydantic + Alembic - conexão com banco de dados
 
-🏆 Funções e estrutura de dados com Python
-
-🏆 Conceitos Orientação a Objetos (POO)
-
-🏆 SQL e NoSQL (MongoDB)
-
-🏆 FastAPI e Docker 
-
-🏆 IA
-
+🏆 FastAPI - Desenvolver a aplicação
 
 ---
 ## Desafio de Projeto da DIO
+https://github.com/digitalinnovationone/workout_api
 
-⚠️ Criando uma API RESTful Assíncrona Para Um Sistema Bancário Com FastAPI e Python - Entenda como a abstração e modelagem são aliados para APIs mais semânticas e coesas.
+⚠️ Adicionar query parameters nos endpoints
+~~~
+-Atleta
+  -nome
+  -cpf
+~~~    
+   Foi adicionado no arquivo atleta/controller.py
+
+    @router.get(
+            path='/nome={nome}', 
+            summary='consultar um atleta pelo nome',
+            status_code = status.HTTP_200_OK,
+            response_model= AtletaOut,
+            ) 
+
+    async def query(nome: str, db_session: DatabaseDependency, cpf: str | None = None) -> AtletaOut:
+        atleta: AtletaOut = (
+        await db_session.execute(select(AtletaModel).filter_by(nome=nome, cpf=cpf))
+            ).scalars().first()
+     
+        if not atleta:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND, 
+                detail= f'Atleta não encontrado com nome: {nome}'
+                )
+    
+        return atleta
 
 
-⚠️ Simplificando a Criação de Soluções Inteligentes com LangChain e Python - Conheça as tendências em IA Generativa (segundo a Base10) para soluções AI-based
 
-⚠️ Natural ou Fake Natty? Como Vencer na Era das IAs Generativas! - Transforme suas ideias em aplicações inteligentes com facilidade e eficiência.
+⚠️ Customizar response de retorno de endpoints
+
+~~~
+- get all
+    -atleta
+    -nome
+    -centro_treinamento
+    -categoria
+~~~
+
+ Foi criado o schema personalizado em atletas/schemas.py
+
+     class AtletaResponse(BaseSchema):
+        nome: Annotated[str, Field(description='Nome do Atleta', example='Joao', max_length=50)]
+        categoria: Annotated[CategoriaIn, Field(description='Categoria do Atleta')]
+        centro_treinamento: Annotated[CentroTreinamentoAtleta, Field(description='Centro de treinamento do Atleta')]
 
 
+ Foi adicionado o endpoint no arquivo atleta/controller.py
 
-Trilha com mais de 67 horas que vai desde os fundamentos de Python até o desenvolvimento de APIs com FastAPI, incluindo a importância dos bancos de dados SQL e NoSQL. Inclui ainda um módulo sobre IA, passando por tópicos essenciais como ML, NLP, LLM e IA Generativa 
+     @router.get(
+            path='/all_atletas', 
+            summary='consulta personalizada todos os atletas',
+            status_code = status.HTTP_200_OK,
+            response_model= list[AtletaResponse],
+            ) 
+
+
+    async def query(db_session: DatabaseDependency) -> list[AtletaResponse]:
+        atletas: list[AtletaResponse] = (await db_session.execute(select(AtletaModel))).scalars().all()
+
+        return [AtletaResponse.model_validate(atleta) for atleta in atletas]
+
+
+⚠️ Manipular exceção de integridade dos dados em cada módulo/tabela.
+
+~~~
+    - qlalchemy.exc.IntegrityError e devolver a seguinte mensagem: “Já existe um atleta cadastrado com o cpf: x”
+    - status_code: 303
+~~~
+
+     await db_session.commit()
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_303_SEE_OTHER,
+                detail=f'Já existe um atleta cadastrado com o cpf: {atleta_in.cpf}'
+            )
+
+⚠️ Adicionar paginação utilizando a lib: fastapi-pagination
+~~~
+-limit e offset
+~~~
+
+    #Add pagination with SQLAlchemy
+    from fastapi_pagination import LimitOffsetPage, Page
+    from fastapi_pagination.ext.sqlalchemy import paginate
+
+    @router.get(
+            path='/', 
+            summary='consultar todos os atletas',
+            status_code = status.HTTP_200_OK,
+            response_model= LimitOffsetPage[AtletaOut],
+            ) 
+
+
+    async def query(db_session: DatabaseDependency):
+    
+        return await paginate(db_session, select(AtletaModel))
+
+
 
 
